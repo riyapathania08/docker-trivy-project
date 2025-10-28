@@ -15,12 +15,20 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
-            steps {
-                echo "Building Docker image..."
-                bat "docker build -t %IMAGE_NAME%:latest ."
-            }
+stage('Docker Login') {
+    steps {
+        withCredentials([usernamePassword(credentialsId: 'dockerhub-cred', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+            bat "echo %PASSWORD% | docker login -u %USERNAME% --password-stdin"
         }
+    }
+}
+
+stage('Build Docker Image') {
+    steps {
+        echo "Building Docker image..."
+        bat "docker build -t riyapathania08/trivy-app:latest ."
+    }
+}
 
         stage('Trivy Scan') {
             steps {
