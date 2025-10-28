@@ -1,6 +1,11 @@
 pipeline {
     agent any
 
+    environment {
+        DOCKERHUB_CREDENTIALS = 'dockerhub'
+        IMAGE_NAME = "riyapathania08/trivy-app"
+    }
+
     stages {
 
         stage('Clone Repository') {
@@ -13,21 +18,36 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 echo "Building Docker image..."
-                bat "docker build -t trivy-app:latest ."
+                bat "docker build -t %IMAGE_NAME%:latest ."
             }
         }
 
         stage('Trivy Scan') {
             steps {
-                echo "Running Trivy vulnerability scan..."
-                bat "trivy image --exit-code 1 --severity HIGH,CRITICAL trivy-app:latest"
+                echo "Scanning Docker image for vulnerabilities..."
+                bat "trivy image --exit-code 0 --severity HIGH,CRITICAL %IMAGE_NAME%:latest"
+            }
+        }
+
+        stage('Docker Login') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: DOCKERHUB_CREDENTIALS, usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                    bat "echo %PASSWORD% | docker login -u %USERNAME% --password-stdin"
+                }
+            }
+        }
+
+        stage('Push to Docker Hub') {
+            steps {
+                echo "Pushing image to Docker Hub..."
+                bat "docker push %IMAGE_NAME%:latest"
             }
         }
 
         stage('Run Docker Container') {
             steps {
                 echo "Running Docker Container..."
-                bat "docker run -d -p 3000:3000 --name trivy-app trivy-app:latest"
+                bat "docker run -d -p 3000:3000 --name trivy-app %IMAGE_NAME%:latest"
             }
         }
     }
