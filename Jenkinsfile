@@ -2,36 +2,32 @@ pipeline {
     agent any
 
     stages {
+
         stage('Clone Repository') {
             steps {
                 echo "Pulling code from GitHub..."
-                git 'https://github.com/riyapathania08/docker-trivy-project.git'
+                checkout scm
             }
         }
 
         stage('Build Docker Image') {
             steps {
                 echo "Building Docker image..."
-                bat 'docker build -t trivy-app:latest .'
+                bat "docker build -t trivy-app:latest ."
             }
         }
 
-        stage('Run Docker Scan with Trivy') {
+        stage('Trivy Scan') {
             steps {
-                echo "Scanning Docker image with Trivy..."
-                bat '''
-                trivy image --exit-code 1 --severity HIGH,CRITICAL trivy-app:latest
-                '''
+                echo "Running Trivy vulnerability scan..."
+                bat "trivy image --exit-code 1 --severity HIGH,CRITICAL trivy-app:latest"
             }
         }
 
         stage('Run Docker Container') {
-            when {
-                expression { currentBuild.result == null } // Only run if previous steps succeed
-            }
             steps {
                 echo "Running Docker Container..."
-                bat 'docker run -d -p 3000:3000 --name trivy-app trivy-app:latest'
+                bat "docker run -d -p 3000:3000 --name trivy-app trivy-app:latest"
             }
         }
     }
